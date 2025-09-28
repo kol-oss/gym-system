@@ -1,56 +1,104 @@
 package com.epam.gym.service.impl;
 
-import com.epam.gym.dao.TraineeDao;
-import com.epam.gym.dao.TrainerDao;
-import com.epam.gym.dao.TrainingDao;
-import com.epam.gym.exception.NotFoundException;
+import com.epam.gym.dto.CreateTrainingDto;
+import com.epam.gym.dto.UpdateTrainingDto;
+import com.epam.gym.mapper.TrainingMapper;
+import com.epam.gym.model.Trainee;
+import com.epam.gym.model.Trainer;
 import com.epam.gym.model.Training;
+import com.epam.gym.model.TrainingType;
+import com.epam.gym.repository.TraineeRepository;
+import com.epam.gym.repository.TrainerRepository;
+import com.epam.gym.repository.TrainingRepository;
+import com.epam.gym.repository.TrainingTypeRepository;
 import com.epam.gym.service.TrainingService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.persistence.criteria.CriteriaQuery;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@AllArgsConstructor
+@Slf4j
 public class TrainingServiceImpl implements TrainingService {
-    @Autowired
-    private TrainingDao trainingDao;
+    private TrainingRepository trainingRepository;
+    private TrainingMapper trainingMapper;
 
-    @Autowired
-    private TrainerDao trainerDao;
-
-    @Autowired
-    private TraineeDao traineeDao;
+    private TraineeRepository traineeRepository;
+    private TrainerRepository trainerRepository;
+    private TrainingTypeRepository trainingTypeRepository;
 
     @Override
     public List<Training> findAllTrainings() {
-        return trainingDao.findAll();
+        return trainingRepository.findAll();
+    }
+
+    @Override
+    public List<Training> findAllTrainings(CriteriaQuery<Training> criteria) {
+        return trainingRepository.findAll(criteria);
     }
 
     @Override
     public Training findTrainingById(UUID id) {
-        Optional<Training> training = trainingDao.findById(id);
-        return training
-                .orElseThrow(() -> new NotFoundException("Training with id " + id + " not found so it can not be selected"));
+        return trainingRepository.findByIdOrThrow(id);
     }
 
     @Override
-    public Training createTraining(Training training) {
-        UUID trainerId = training.getTrainerId();
-        trainerDao.findById(trainerId)
-                .orElseThrow(() -> new NotFoundException("Trainer with id " + trainerId + " not found so training can not be created"));
+    @Transactional
+    public Training createTraining(CreateTrainingDto trainingDto) {
+        if (trainingDto.getDuration() <= 0) {
+            throw new IllegalArgumentException("Duration must be greater than 0");
+        }
 
-        UUID traineeId = training.getTraineeId();
-        traineeDao.findById(traineeId)
-                .orElseThrow(() -> new NotFoundException("Trainee with id " + traineeId + " not found so training can not be created"));
+        Trainer trainer = trainerRepository.findByIdOrThrow(trainingDto.getTrainerId());
+        Trainee trainee = traineeRepository.findByIdOrThrow(trainingDto.getTraineeId());
+        TrainingType trainingType = trainingTypeRepository.findByIdOrThrow(trainingDto.getTrainingTypeId());
 
-        UUID trainingId = UUID.randomUUID();
-        training.setId(trainingId);
+        Training training = trainingMapper.toEntity(trainingDto);
+        training.setTrainer(trainer);
+        training.setTrainee(trainee);
+        training.setType(trainingType);
 
-        trainingDao.insert(trainingId, training);
+        trainingRepository.save(training.getId(), training);
+        log.info("Training between trainer {} and trainee {} on {} was created", trainer.getId(), trainee.getId(), training.getDate());
 
+        return training;
+    }
+
+    @Override
+    @Transactional
+    public Training updateTraining(UUID id, UpdateTrainingDto trainingDto) {
+        Training training = trainingRepository.findByIdOrThrow(id);
+
+        if (trainingDto.getDuration() <= 0) {
+            throw new IllegalArgumentException("Duration must be greater than 0");
+        }
+
+        Trainer trainer = trainerRepository.findByIdOrThrow(trainingDto.getTrainerId());
+        Trainee trainee = traineeRepository.findByIdOrThrow(trainingDto.getTraineeId());
+        TrainingType trainingType = trainingTypeRepository.findByIdOrThrow(trainingDto.getTrainingTypeId());
+
+        trainingMapper.updateEntityFromDto(trainingDto, training);
+        training.setTrainer(trainer);
+        training.setTrainee(trainee);
+        training.setType(trainingType);
+
+        trainingRepository.save(training.getId(), training);
+        log.info("Training between trainer {} and trainee {} was updated", trainer.getId(), trainee.getId());
+
+        return training;
+    }
+
+    @Override
+    @Transactional
+    public Training deleteTraining(UUID id) {
+        Training training = trainingRepository.findByIdOrThrow(id);
+
+        trainingRepository.delete(id);
         return training;
     }
 }

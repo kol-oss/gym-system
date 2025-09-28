@@ -1,53 +1,129 @@
 package com.epam.gym.service.impl;
 
-import com.epam.gym.dao.TrainerDao;
+import com.epam.gym.dto.CreateTrainerDto;
+import com.epam.gym.dto.UpdateTrainerDto;
 import com.epam.gym.exception.NotFoundException;
+import com.epam.gym.mapper.TrainerMapper;
+import com.epam.gym.model.Trainee;
 import com.epam.gym.model.Trainer;
+import com.epam.gym.model.TrainingType;
+import com.epam.gym.model.User;
+import com.epam.gym.repository.TraineeRepository;
+import com.epam.gym.repository.TrainerRepository;
+import com.epam.gym.repository.TrainingTypeRepository;
+import com.epam.gym.repository.UserRepository;
 import com.epam.gym.service.TrainerService;
-import com.epam.gym.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.persistence.criteria.CriteriaQuery;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@AllArgsConstructor
+@Slf4j
 public class TrainerServiceImpl implements TrainerService {
-    @Autowired
-    private TrainerDao trainerDao;
+    private TrainerRepository trainerRepository;
+    private TrainerMapper trainerMapper;
 
-    @Autowired
-    private UserService userService;
+    private TraineeRepository traineeRepository;
+    private TrainingTypeRepository trainingTypeRepository;
+    private UserRepository userRepository;
 
     @Override
     public List<Trainer> findAllTrainers() {
-        return trainerDao.findAll();
+        return trainerRepository.findAll();
+    }
+
+    @Override
+    public List<Trainer> findAllFreeTrainersByTraineeUsername(String username) {
+        return trainerRepository.findFreeTrainersByTraineeUsername(username);
+    }
+
+    @Override
+    public List<Trainer> findAllTrainers(CriteriaQuery<Trainer> criteria) {
+        return trainerRepository.findAll(criteria);
     }
 
     @Override
     public Trainer findTrainerById(UUID id) {
-        Optional<Trainer> trainer = trainerDao.findById(id);
-        return trainer
-                .orElseThrow(() -> new NotFoundException("Trainer with id " + id + " not found"));
+        return trainerRepository.findByIdOrThrow(id);
     }
 
     @Override
-    public Trainer createTrainer(Trainer trainer) {
-        Trainer validated = (Trainer) userService.preCreateUser(trainer);
-        trainerDao.insert(validated.getId(), validated);
-
-        return validated;
+    public Trainer findTrainerByUsername(String username) {
+        return trainerRepository
+                .findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Trainer with username " + username + " not found"));
     }
 
     @Override
-    public Trainer updateTrainer(UUID id, Trainer trainer) {
-        trainerDao.findById(id)
-                .orElseThrow(() -> new NotFoundException("Trainer with id " + id + " not found"));
+    @Transactional
+    public Trainer createTrainer(CreateTrainerDto trainerDto) {
+        UUID userId = trainerDto.getUserId();
+        User user = userRepository.findByIdOrThrow(userId);
 
-        Trainer validated = (Trainer) userService.preUpdateUser(trainer);
+        Trainer trainer = trainerMapper.toEntity(trainerDto);
+        trainer.setUser(user);
 
-        trainerDao.update(id, validated);
+        if (trainerDto.getSpecializationId() != null) {
+            UUID trainingTypeId = trainerDto.getSpecializationId();
+            TrainingType trainingType = trainingTypeRepository.findByIdOrThrow(trainingTypeId);
+
+            trainer.setSpecialization(trainingType);
+        }
+
+        trainerRepository.save(trainer.getId(), trainer);
+        log.info("Trainer with username {} and id {} was created", user.getUsername(), trainer.getId());
+
+        return trainer;
+    }
+
+    private List<Trainee> getTrainees(List<UUID> traineeIds) {
+        return traineeIds
+                .stream()
+                .map(id -> traineeRepository.findByIdOrThrow(id))
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public Trainer updateTrainer(UUID id, UpdateTrainerDto trainerDto) {
+        Trainer trainer = trainerRepository.findByIdOrThrow(id);
+
+        trainerMapper.updateEntityFromDto(trainerDto, trainer);
+
+        UUID userId = trainerDto.getUserId();
+        User user = userRepository.findByIdOrThrow(userId);
+
+        trainer.setUser(user);
+
+        if (trainerDto.getTraineeIds() != null) {
+            trainer.setTrainees(getTrainees(trainerDto.getTraineeIds()));
+        }
+
+        if (trainerDto.getSpecializationId() != null) {
+            UUID trainingTypeId = trainerDto.getSpecializationId();
+            TrainingType trainingType = trainingTypeRepository.findByIdOrThrow(trainingTypeId);
+
+            trainer.setSpecialization(trainingType);
+        }
+
+        trainerRepository.save(id, trainer);
+        log.debug("Trainer with username {} and id {} updated his data", user.getUsername(), trainer.getId());
+
+        return trainer;
+    }
+
+    @Override
+    @Transactional
+    public Trainer deleteTrainer(UUID id) {
+        Trainer trainer = trainerRepository.findByIdOrThrow(id);
+
+        trainerRepository.delete(id);
         return trainer;
     }
 }

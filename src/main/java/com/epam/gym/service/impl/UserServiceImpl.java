@@ -1,98 +1,112 @@
 package com.epam.gym.service.impl;
 
-import com.epam.gym.dao.TraineeDao;
-import com.epam.gym.dao.TrainerDao;
-import com.epam.gym.model.Trainee;
-import com.epam.gym.model.Trainer;
+import com.epam.gym.dto.CreateUserDto;
+import com.epam.gym.dto.CreateUserResponse;
+import com.epam.gym.dto.UpdateUserDto;
+import com.epam.gym.exception.NotFoundException;
+import com.epam.gym.mapper.UserMapper;
 import com.epam.gym.model.User;
 import com.epam.gym.properties.AppProperties;
+import com.epam.gym.repository.UserRepository;
 import com.epam.gym.service.UserService;
 import com.epam.gym.utils.PasswordUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
+@AllArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
-    private static final String USERNAME_REGEX_TEMPLATE = "%s(\\d+)?$";
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-
     private AppProperties appProperties;
+    private PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private TraineeDao traineeDao;
-
-    @Autowired
-    private TrainerDao trainerDao;
-
-    private static long getUsernameNumber(List<? extends User> users, String username) {
-        return users.stream()
-                .filter(t -> t.getUsername().matches(String.format(USERNAME_REGEX_TEMPLATE, username)))
-                .count();
-    }
-
-    @Autowired
-    public void setAppProperties(AppProperties appProperties) {
-        this.appProperties = appProperties;
-    }
-
-    private long getOccurrences(String username) {
-        List<Trainee> trainees = traineeDao.findAll();
-        List<Trainer> trainers = trainerDao.findAll();
-
-        return getUsernameNumber(trainees, username) + getUsernameNumber(trainers, username);
-    }
-
-    private String formatUsername(String username, long occurrences) {
-        if (occurrences == 0)
-            return username;
-        else {
-            String formatted = username + occurrences;
-            logger.debug("Username {} was changed into {} due to conflict with existing one", username, formatted);
-
-            return formatted;
-        }
-    }
+    private UserRepository userRepository;
+    private UserMapper userMapper;
 
     private String createUsername(String firstName, String lastName) {
         String username = firstName + appProperties.getUsernameDelimiter() + lastName;
-        long occurrences = getOccurrences(username);
+        if (userRepository.findByUsername(username).isPresent()) {
+            long occurrences = userRepository.countByUsernameLike(username);
 
-        return formatUsername(username, occurrences);
+            String conflicted = username;
+            username += occurrences;
+
+            log.debug("Username {} was changed into {} due to conflict with existing one", conflicted, username);
+        }
+
+        return username;
     }
 
-    public User preCreateUser(User user) {
-        // Setting new id
-        UUID userId = UUID.randomUUID();
-        user.setId(userId);
+    @Override
+    public User findById(UUID id) {
+        return userRepository.findByIdOrThrow(id);
+    }
+
+    @Override
+    public User findByUsername(String username) {
+        return userRepository
+                .findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("User with username " + username + " not found"));
+    }
+
+    @Override
+    @Transactional
+    public CreateUserResponse createUser(CreateUserDto userDto) {
+        User user = userMapper.toEntity(userDto);
+        user.setActive(true);
 
         // Setting password
         String password = PasswordUtils.generate(appProperties.getMaxPasswordLength());
-        user.setPassword(password);
+        user.setPassword(passwordEncoder.encode(password));
 
         // Setting username
         String username = createUsername(user.getFirstName(), user.getLastName());
         user.setUsername(username);
 
-        logger.debug("User {} creation validation passed", username);
+        userRepository.save(user.getId(), user);
+        log.debug("User with name {} created", username);
 
+        CreateUserResponse response = new CreateUserResponse();
+        response.setUsername(username);
+        response.setPassword(password);
+
+        return response;
+    }
+
+    @Override
+    @Transactional
+    public User updateUser(UUID id, UpdateUserDto userDto) {
+        User user = userRepository
+                .findById(id)
+                .orElseThrow(() -> new NotFoundException("User with id " + id + " not found"));
+
+        userMapper.updateEntityFromDto(userDto, user);
+
+        // Setting username
+        String username = createUsername(user.getFirstName(), user.getLastName());
+
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(userDto.getPassword()));
+
+        userRepository.save(user.getId(), user);
+
+        log.debug("User {} change validation passed", username);
         return user;
     }
 
-    public User preUpdateUser(User user) {
-        // Setting username
-        String username = user.getUsername();
-        long occurrences = getOccurrences(username);
+    @Override
+    @Transactional
+    public User deleteUserByUsername(String username) {
+        User user = userRepository
+                .findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("User with username " + username + " not found"));
 
-        String validatedUsername = formatUsername(username, occurrences);
-        user.setUsername(validatedUsername);
-
-        logger.debug("User {} change validation passed", username);
-
+        userRepository.delete(user.getId());
         return user;
     }
 }
