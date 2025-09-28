@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @PropertySource("classpath:application.properties")
+@PropertySource(value = "file:.env", ignoreResourceNotFound = true)
 @Getter
 @NoArgsConstructor
 public class AppProperties {
@@ -17,9 +18,18 @@ public class AppProperties {
     @Value("${app.security.username-delimiter}")
     private String usernameDelimiter;
 
-    @Value("${app.data.storage-location}")
-    private String storageLocation;
+    @Value("${DB_URL}")
+    private String dbUrl;
 
-    @Value("${app.data.save-updates}")
-    private boolean saveUpdates;
+    @Value("${DB_USERNAME}")
+    private String dbUsername;
+
+    @Value("${DB_PASSWORD}")
+    private String dbPassword;
+
+    @Value("${db.driver}")
+    private String dbDriver;
+
+    @Value("${db.hibernate.mode}")
+    private String hibernateMode;
 }
