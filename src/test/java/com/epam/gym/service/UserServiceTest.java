@@ -1,153 +1,235 @@
 package com.epam.gym.service;
 
-import com.epam.gym.dao.TraineeDao;
-import com.epam.gym.dao.TrainerDao;
-import com.epam.gym.model.Trainee;
-import com.epam.gym.model.Trainer;
+import com.epam.gym.dto.CreateUserDto;
+import com.epam.gym.dto.CreateUserResponse;
+import com.epam.gym.dto.UpdateUserDto;
+import com.epam.gym.exception.NotFoundException;
+import com.epam.gym.mapper.UserMapper;
 import com.epam.gym.model.User;
 import com.epam.gym.properties.AppProperties;
+import com.epam.gym.repository.UserRepository;
 import com.epam.gym.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
-    private static final String USERNAME_DELIMITER = ":";
-    private static final int MAX_PASSWORD_LENGTH = 10;
+    private static final int MAX_PASSWORD_LENGTH = 8;
+    private static final String USERNAME_DELIMITER = ".";
 
     @Mock
     private AppProperties appProperties;
 
     @Mock
-    private TraineeDao traineeDao;
+    private PasswordEncoder passwordEncoder;
 
     @Mock
-    private TrainerDao trainerDao;
+    private UserRepository userRepository;
+
+    @Mock
+    private UserMapper userMapper;
 
     @InjectMocks
     private UserServiceImpl userService;
 
     @Test
-    public void givenNewUser_whenPreCreateUser_returnFormatedUser() {
+    public void givenStoredUser_whenFindById_thenReturnUser() {
         // Arrange
-        final String firstName = "FirstName";
-        final String lastName = "LastName";
+        final UUID userId = UUID.randomUUID();
+        User user = new User();
+        user.setId(userId);
 
-        User userDto = new Trainee();
-        userDto.setFirstName(firstName);
-        userDto.setLastName(lastName);
+        when(userRepository.findByIdOrThrow(userId)).thenReturn(user);
+
+        // Act
+        User result = userService.findById(userId);
+
+        // Assert
+        assertEquals(user, result);
+        verify(userRepository).findByIdOrThrow(userId);
+    }
+
+    @Test
+    public void givenExistingUsername_whenFindByUsername_thenReturnUser() {
+        // Arrange
+        final String username = "john.doe";
+
+        User user = new User();
+        user.setUsername(username);
+
+        when(userRepository.findByUsername(username)).thenReturn(Optional.of(user));
+
+        // Act
+        User result = userService.findByUsername(username);
+
+        // Assert
+        assertEquals(user, result);
+        verify(userRepository).findByUsername(username);
+    }
+
+    @Test
+    public void givenNonExistingUsername_whenFindByUsername_thenThrowNotFound() {
+        // Arrange
+        final String username = "nonexistent";
+        when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(NotFoundException.class, () -> userService.findByUsername(username));
+        verify(userRepository).findByUsername(username);
+    }
+
+    @Test
+    public void givenCreateUserDto_whenCreateUser_thenReturnResponse() {
+        // Arrange
+        final String firstName = "John";
+        final String lastName = "Doe";
+        final String username = firstName + USERNAME_DELIMITER + lastName;
+        final String password = "encoded";
+
+        CreateUserDto createDto = new CreateUserDto();
+        createDto.setFirstName(firstName);
+        createDto.setLastName(lastName);
+
+        User user = new User();
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setUsername(username);
+        user.setPassword(password);
+
+        when(userMapper.toEntity(createDto)).thenReturn(user);
+        when(appProperties.getMaxPasswordLength()).thenReturn(MAX_PASSWORD_LENGTH);
+        when(appProperties.getUsernameDelimiter()).thenReturn(USERNAME_DELIMITER);
+
+        when(passwordEncoder.encode(Mockito.any(CharSequence.class))).thenReturn(password);
+        when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
+
+        // Act
+        CreateUserResponse response = userService.createUser(createDto);
+
+        // Assert
+        assertEquals(username, response.getUsername());
+        assertNotEquals(password, response.getPassword());
+        assertEquals(MAX_PASSWORD_LENGTH, response.getPassword().length());
+
+        verify(userRepository).save(any(), eq(user));
+    }
+
+    @Test
+    public void givenCreateUserDto_whenUsernameConflict_thenReturnModifiedUsername() {
+        // Arrange
+        final String firstName = "John";
+        final String lastName = "Doe";
+        final String username = firstName + USERNAME_DELIMITER + lastName;
+        final String password = "encoded";
+        final long occurrences = 2;
+
+        CreateUserDto createDto = new CreateUserDto();
+        createDto.setFirstName(firstName);
+        createDto.setLastName(lastName);
+
+        User user = new User();
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setUsername(username);
+        user.setPassword(password);
+
+        when(userMapper.toEntity(createDto)).thenReturn(user);
+        when(appProperties.getMaxPasswordLength()).thenReturn(MAX_PASSWORD_LENGTH);
+        when(appProperties.getUsernameDelimiter()).thenReturn(USERNAME_DELIMITER);
+        when(userRepository.findByUsername(username)).thenReturn(Optional.of(new User()));
+        when(userRepository.countByUsernameLike(username)).thenReturn(occurrences);
+
+        // Act
+        CreateUserResponse response = userService.createUser(createDto);
+
+        // Assert
+        final String formattedUsername = username + occurrences;
+
+        assertEquals(formattedUsername, response.getUsername());
+        assertNotEquals(password, response.getPassword());
+
+        verify(userRepository).save(any(), eq(user));
+    }
+
+    @Test
+    public void givenUpdateUser_whenUserExists_thenUpdateAndReturn() {
+        // Arrange
+        final UUID userId = UUID.randomUUID();
+
+        final String newPassword = "password";
+        final String encodedPassword = "encoded";
+
+        UpdateUserDto updateDto = new UpdateUserDto();
+        updateDto.setPassword(newPassword);
+
+        User user = new User();
+        user.setId(userId);
+        user.setPassword(encodedPassword);
 
         when(appProperties.getUsernameDelimiter()).thenReturn(USERNAME_DELIMITER);
-        when(appProperties.getMaxPasswordLength()).thenReturn(MAX_PASSWORD_LENGTH);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode(newPassword)).thenReturn(encodedPassword);
 
         // Act
-        User result = userService.preCreateUser(userDto);
+        User updated = userService.updateUser(userId, updateDto);
 
         // Assert
-        assertNotNull(result.getId());
-        assertNotNull(result.getPassword());
-        assertEquals(MAX_PASSWORD_LENGTH, result.getPassword().length());
+        assertEquals(encodedPassword, updated.getPassword());
 
-        String expectedUsername = firstName + USERNAME_DELIMITER + lastName;
-        assertEquals(expectedUsername, result.getUsername());
-
-        verify(appProperties, times(1)).getUsernameDelimiter();
-        verify(appProperties, times(1)).getMaxPasswordLength();
+        verify(userMapper).updateEntityFromDto(updateDto, user);
+        verify(userRepository).save(userId, user);
     }
 
     @Test
-    public void givenUserWithExistingUsername_whenPreCreateUser_returnFormatedUserWithFixedUsername() {
+    public void givenUpdateUser_whenUserNotFound_thenThrowNotFound() {
         // Arrange
-        final String firstName = "FirstName";
-        final String lastName = "LastName";
+        final UUID userId = UUID.randomUUID();
+        UpdateUserDto updateDto = new UpdateUserDto();
 
-        Trainee userDto = new Trainee();
-        userDto.setFirstName(firstName);
-        userDto.setLastName(lastName);
-        userDto.setUsername(firstName + USERNAME_DELIMITER + lastName);
+        when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
-        when(appProperties.getUsernameDelimiter()).thenReturn(USERNAME_DELIMITER);
-        when(appProperties.getMaxPasswordLength()).thenReturn(MAX_PASSWORD_LENGTH);
-        when(traineeDao.findAll()).thenReturn(List.of(userDto));
-
-        // Act
-        User result = userService.preCreateUser(userDto);
-
-        // Assert
-        assertNotNull(result.getId());
-        assertNotNull(result.getPassword());
-        assertEquals(MAX_PASSWORD_LENGTH, result.getPassword().length());
-
-        // sequence number added to the end
-        String expectedUsername = firstName + USERNAME_DELIMITER + lastName + "1";
-        assertEquals(expectedUsername, result.getUsername());
-
-        verify(appProperties, times(1)).getUsernameDelimiter();
-        verify(appProperties, times(1)).getMaxPasswordLength();
+        // Act & Assert
+        assertThrows(NotFoundException.class, () -> userService.updateUser(userId, updateDto));
+        verify(userRepository).findById(userId);
     }
 
     @Test
-    public void givenExistingUser_whenPreUpdateUserWithUniqueUsername_returnFormatedUser() {
+    public void givenUsername_whenDeleteUserByUsername_thenReturnUser() {
         // Arrange
-        final UUID id = UUID.randomUUID();
-        final String firstName = "FirstName";
-        final String lastName = "LastName";
-        final String username = firstName + USERNAME_DELIMITER + lastName;
-        final String password = "0123456789";
+        final String username = "john.doe";
 
-        Trainer userDto = new Trainer();
-        userDto.setId(id);
-        userDto.setFirstName(firstName);
-        userDto.setLastName(lastName);
-        userDto.setUsername(username);
-        userDto.setPassword(password);
+        User user = new User();
+        user.setUsername(username);
+
+        when(userRepository.findByUsername(username)).thenReturn(Optional.of(user));
 
         // Act
-        User result = userService.preUpdateUser(userDto);
+        User deleted = userService.deleteUserByUsername(username);
 
         // Assert
-        assertEquals(id, result.getId());
-        assertEquals(password, result.getPassword());
-        assertEquals(username, result.getUsername());
+        assertEquals(user, deleted);
+        verify(userRepository).delete(user.getId());
     }
 
     @Test
-    public void givenExistingUser_whenPreUpdateUserWithNotUniqueUsername_returnFormatedUser() {
+    public void givenNonExistingUsername_whenDeleteUserByUsername_thenThrowNotFound() {
         // Arrange
-        final UUID id = UUID.randomUUID();
-        final String firstName = "FirstName";
-        final String lastName = "LastName";
-        final String username = firstName + USERNAME_DELIMITER + lastName;
-        final String password = "0123456789";
+        final String username = "nonexistent";
+        when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
 
-        Trainer userDto = new Trainer();
-        userDto.setId(id);
-        userDto.setFirstName(firstName);
-        userDto.setLastName(lastName);
-        userDto.setUsername(username);
-        userDto.setPassword(password);
-
-        when(trainerDao.findAll()).thenReturn(List.of(userDto));
-
-        // Act
-        User result = userService.preUpdateUser(userDto);
-
-        // Assert
-        assertEquals(id, result.getId());
-        assertEquals(password, result.getPassword());
-
-        // sequence number added to the end
-        String expectedUsername = firstName + USERNAME_DELIMITER + lastName + "1";
-        assertEquals(expectedUsername, result.getUsername());
+        // Act & Assert
+        assertThrows(NotFoundException.class, () -> userService.deleteUserByUsername(username));
+        verify(userRepository).findByUsername(username);
     }
 }

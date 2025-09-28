@@ -1,9 +1,17 @@
 package com.epam.gym.service;
 
-import com.epam.gym.dao.TraineeDao;
+import com.epam.gym.dto.CreateTraineeDto;
+import com.epam.gym.dto.UpdateTraineeDto;
 import com.epam.gym.exception.NotFoundException;
+import com.epam.gym.mapper.TraineeMapper;
 import com.epam.gym.model.Trainee;
+import com.epam.gym.model.Trainer;
+import com.epam.gym.model.User;
+import com.epam.gym.repository.TraineeRepository;
+import com.epam.gym.repository.TrainerRepository;
+import com.epam.gym.repository.UserRepository;
 import com.epam.gym.service.impl.TraineeServiceImpl;
+import jakarta.persistence.criteria.CriteriaQuery;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,183 +29,206 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class TraineeServiceTest {
     @Mock
-    private TraineeDao traineeDao;
+    private TraineeRepository traineeRepository;
 
     @Mock
-    private UserService userService;
+    private TraineeMapper traineeMapper;
+
+    @Mock
+    private TrainerRepository trainerRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private TraineeServiceImpl traineeService;
 
     @Test
-    public void givenExistingTrainee_whenFindAllTrainees_thenReturnAllTrainees() {
+    public void givenTrainees_whenFindAll_thenReturnList() {
         // Arrange
-        Trainee trainee = new Trainee();
-        trainee.setId(UUID.randomUUID());
-        trainee.setFirstName("FirstName");
-        trainee.setLastName("LastName");
-
-        List<Trainee> expected = List.of(trainee);
-        when(traineeDao.findAll()).thenReturn(List.of(trainee));
+        List<Trainee> trainees = List.of(new Trainee(), new Trainee());
+        when(traineeRepository.findAll()).thenReturn(trainees);
 
         // Act
         List<Trainee> result = traineeService.findAllTrainees();
 
         // Assert
-        assertEquals(expected, result);
-        verify(traineeDao, times(1)).findAll();
+        assertEquals(trainees, result);
+        verify(traineeRepository).findAll();
     }
 
     @Test
-    public void givenExistingTrainee_whenFindTraineeById_thenReturnTrainee() {
+    @SuppressWarnings("unchecked")
+    public void givenCriteria_whenFindAll_thenReturnList() {
+        // Arrange
+        CriteriaQuery<Trainee> criteria = mock(CriteriaQuery.class);
+
+        List<Trainee> trainees = List.of(new Trainee());
+        when(traineeRepository.findAll(criteria)).thenReturn(trainees);
+
+        // Act
+        List<Trainee> result = traineeService.findAllTrainees(criteria);
+
+        // Assert
+        assertEquals(trainees, result);
+        verify(traineeRepository).findAll(criteria);
+    }
+
+    @Test
+    public void givenTraineeId_whenFindById_thenReturnTrainee() {
         // Arrange
         final UUID id = UUID.randomUUID();
 
         Trainee trainee = new Trainee();
         trainee.setId(id);
-        trainee.setFirstName("FirstName");
-        trainee.setLastName("LastName");
 
-        when(traineeDao.findById(id)).thenReturn(Optional.of(trainee));
+        when(traineeRepository.findByIdOrThrow(id)).thenReturn(trainee);
 
         // Act
         Trainee result = traineeService.findTraineeById(id);
 
         // Assert
-        assertEquals(result, trainee);
-        verify(traineeDao, times(1)).findById(any());
+        assertEquals(trainee, result);
+        verify(traineeRepository).findByIdOrThrow(id);
     }
 
     @Test
-    public void givenNotExistingTrainee_whenFindTraineeById_thenThrowNotFound() {
+    public void givenUsername_whenFindByUsername_thenReturnTrainee() {
         // Arrange
-        final UUID wrongId = UUID.randomUUID();
+        final String username = "john.doe";
 
-        when(traineeDao.findById(wrongId)).thenReturn(Optional.empty());
+        User user = new User();
+        user.setUsername(username);
 
-        // Act & Assert
-        assertThrows(NotFoundException.class, () -> traineeService.findTraineeById(wrongId));
-        verify(traineeDao, times(1)).findById(any());
-    }
-
-    @Test
-    public void givenNewTrainee_whenCreateTrainee_thenReturnCreatedTrainee() {
-        // Arrange
         Trainee trainee = new Trainee();
-        trainee.setFirstName("FirstName");
-        trainee.setLastName("LastName");
+        trainee.setUser(user);
 
-        Trainee formatted = new Trainee();
-        formatted.setId(UUID.randomUUID());
-        formatted.setFirstName("FirstName");
-        formatted.setLastName("LastName");
-        formatted.setUsername("FirstName.LastName");
-        formatted.setPassword("0123456789");
-
-        when(userService.preCreateUser(trainee)).thenReturn(formatted);
+        when(traineeRepository.findByUsername(username)).thenReturn(Optional.of(trainee));
 
         // Act
-        Trainee result = traineeService.createTrainee(trainee);
-
-        // Assert
-        assertEquals(formatted, result);
-
-        verify(userService, times(1)).preCreateUser(any());
-        verify(traineeDao, times(1)).insert(formatted.getId(), formatted);
-    }
-
-    @Test
-    public void givenExistingTrainee_whenUpdateTrainee_thenReturnUpdatedTrainee() {
-        // Arrange
-        final UUID id = UUID.randomUUID();
-
-        Trainee trainee = new Trainee();
-        trainee.setId(id);
-        trainee.setFirstName("FirstName");
-        trainee.setLastName("LastName");
-        trainee.setUsername("FirstName.LastName");
-        trainee.setPassword("0123456789");
-
-        Trainee updated = new Trainee();
-        updated.setId(id);
-        updated.setFirstName("FirstName");
-        updated.setLastName("LastName");
-        updated.setUsername("FirstName.LastName");
-        updated.setPassword("9876543210"); // password changed
-
-        when(traineeDao.findById(id)).thenReturn(Optional.of(trainee));
-        when(userService.preUpdateUser(updated)).thenReturn(updated);
-
-        // Act
-        Trainee result = traineeService.updateTrainee(id, updated);
-
-        // Assert
-        assertEquals(updated, result);
-
-        verify(traineeDao, times(1)).findById(id);
-        verify(userService, times(1)).preUpdateUser(any());
-        verify(traineeDao, times(1)).update(id, updated);
-    }
-
-    @Test
-    public void givenNotExistingTrainee_whenUpdateTrainee_thenThrowNotFound() {
-        // Arrange
-        final UUID id = UUID.randomUUID();
-
-        Trainee trainee = new Trainee();
-        trainee.setId(id);
-        trainee.setFirstName("FirstName");
-        trainee.setLastName("LastName");
-        trainee.setUsername("FirstName.LastName");
-        trainee.setPassword("0123456789");
-
-        Trainee updated = new Trainee();
-        updated.setId(id);
-        updated.setFirstName("FirstName");
-        updated.setLastName("LastName");
-        updated.setUsername("FirstName.LastName");
-        updated.setPassword("9876543210"); // password changed
-
-        // trainee is not registered
-
-        // Act & Assert
-        assertThrows(NotFoundException.class, () -> traineeService.updateTrainee(id, updated));
-
-        verify(traineeDao, times(1)).findById(id);
-    }
-
-    @Test
-    public void givenExistingTrainee_whenDeleteTrainee_thenReturnDeletedTrainee() {
-        // Arrange
-        final UUID id = UUID.randomUUID();
-
-        Trainee trainee = new Trainee();
-        trainee.setId(id);
-        trainee.setFirstName("FirstName");
-        trainee.setLastName("LastName");
-        trainee.setUsername("FirstName.LastName");
-        trainee.setPassword("0123456789");
-
-        when(traineeDao.delete(id)).thenReturn(Optional.of(trainee));
-
-        // Act
-        Trainee result = traineeService.deleteTrainee(id);
+        Trainee result = traineeService.findTraineeByUsername(username);
 
         // Assert
         assertEquals(trainee, result);
-
-        verify(traineeDao, times(1)).delete(id);
+        verify(traineeRepository).findByUsername(username);
     }
 
     @Test
-    public void givenNotExistingTrainee_whenDeleteTrainee_thenThrowNotFound() {
+    public void givenNonExistingUsername_whenFindByUsername_thenThrowNotFound() {
         // Arrange
-        final UUID wrongId = UUID.randomUUID();
+        final String username = "nonexistent";
 
-        when(traineeDao.delete(wrongId)).thenReturn(Optional.empty());
+        when(traineeRepository.findByUsername(username)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThrows(NotFoundException.class, () -> traineeService.deleteTrainee(wrongId));
-        verify(traineeDao, times(1)).delete(wrongId);
+        assertThrows(NotFoundException.class, () -> traineeService.findTraineeByUsername(username));
+        verify(traineeRepository).findByUsername(username);
+    }
+
+    @Test
+    public void givenCreateTraineeDto_whenCreateTrainee_thenReturnTrainee() {
+        // Arrange
+        final UUID userId = UUID.randomUUID();
+
+        CreateTraineeDto createDto = new CreateTraineeDto();
+        createDto.setUserId(userId);
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername("john.doe");
+
+        Trainee trainee = new Trainee();
+        trainee.setId(UUID.randomUUID());
+
+        when(userRepository.findByIdOrThrow(userId)).thenReturn(user);
+        when(traineeMapper.toEntity(createDto)).thenReturn(trainee);
+
+        // Act
+        Trainee result = traineeService.createTrainee(createDto);
+
+        // Assert
+        assertEquals(trainee, result);
+        assertEquals(user, result.getUser());
+
+        verify(traineeRepository).save(trainee.getId(), trainee);
+    }
+
+    @Test
+    public void givenUpdateTrainee_whenTraineeExists_thenUpdateAndReturn() {
+        // Arrange
+        final UUID traineeId = UUID.randomUUID();
+        final UUID userId = UUID.randomUUID();
+        final UUID trainerId = UUID.randomUUID();
+
+        List<UUID> trainerIds = List.of(trainerId);
+
+        UpdateTraineeDto updateDto = new UpdateTraineeDto();
+        updateDto.setUserId(userId);
+        updateDto.setTrainerIds(trainerIds);
+
+        Trainee trainee = new Trainee();
+        trainee.setId(traineeId);
+
+        User user = new User();
+        user.setId(userId);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(trainerId);
+
+        when(traineeRepository.findByIdOrThrow(traineeId)).thenReturn(trainee);
+        when(userRepository.findByIdOrThrow(userId)).thenReturn(user);
+        when(trainerRepository.findByIdOrThrow(trainerId)).thenReturn(trainer);
+
+        // Act
+        Trainee result = traineeService.updateTrainee(traineeId, updateDto);
+
+        // Assert
+        assertEquals(user, result.getUser());
+        assertEquals(trainerIds.size(), result.getTrainers().size());
+        assertEquals(trainer, result.getTrainers().getFirst());
+
+        verify(traineeMapper).updateEntityFromDto(updateDto, trainee);
+        verify(traineeRepository).save(traineeId, trainee);
+    }
+
+    @Test
+    public void givenUpdateTrainee_whenTraineeNotFound_thenThrowNotFound() {
+        // Arrange
+        final UUID traineeId = UUID.randomUUID();
+
+        UpdateTraineeDto updateDto = new UpdateTraineeDto();
+        when(traineeRepository.findByIdOrThrow(traineeId)).thenThrow(new NotFoundException("Not found"));
+
+        // Act & Assert
+        assertThrows(NotFoundException.class, () -> traineeService.updateTrainee(traineeId, updateDto));
+    }
+
+    @Test
+    public void givenDeleteTrainee_whenTraineeExists_thenReturnTrainee() {
+        // Arrange
+        final UUID traineeId = UUID.randomUUID();
+
+        Trainee trainee = new Trainee();
+        trainee.setId(traineeId);
+
+        when(traineeRepository.findByIdOrThrow(traineeId)).thenReturn(trainee);
+
+        // Act
+        Trainee result = traineeService.deleteTrainee(traineeId);
+
+        // Assert
+        assertEquals(trainee, result);
+        verify(traineeRepository).delete(traineeId);
+    }
+
+    @Test
+    public void givenDeleteTrainee_whenTraineeNotFound_thenThrowNotFound() {
+        // Arrange
+        final UUID traineeId = UUID.randomUUID();
+
+        when(traineeRepository.findByIdOrThrow(traineeId)).thenThrow(new NotFoundException("Not found"));
+
+        // Act & Assert
+        assertThrows(NotFoundException.class, () -> traineeService.deleteTrainee(traineeId));
     }
 }

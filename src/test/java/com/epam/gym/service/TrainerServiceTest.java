@@ -1,9 +1,19 @@
 package com.epam.gym.service;
 
-import com.epam.gym.dao.TrainerDao;
+import com.epam.gym.dto.CreateTrainerDto;
+import com.epam.gym.dto.UpdateTrainerDto;
 import com.epam.gym.exception.NotFoundException;
+import com.epam.gym.mapper.TrainerMapper;
+import com.epam.gym.model.Trainee;
 import com.epam.gym.model.Trainer;
+import com.epam.gym.model.TrainingType;
+import com.epam.gym.model.User;
+import com.epam.gym.repository.TraineeRepository;
+import com.epam.gym.repository.TrainerRepository;
+import com.epam.gym.repository.TrainingTypeRepository;
+import com.epam.gym.repository.UserRepository;
 import com.epam.gym.service.impl.TrainerServiceImpl;
+import jakarta.persistence.criteria.CriteriaQuery;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,139 +31,236 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class TrainerServiceTest {
     @Mock
-    private TrainerDao trainerDao;
+    private TrainerRepository trainerRepository;
 
     @Mock
-    private UserService userService;
+    private TrainerMapper trainerMapper;
+
+    @Mock
+    private TraineeRepository traineeRepository;
+
+    @Mock
+    private TrainingTypeRepository trainingTypeRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private TrainerServiceImpl trainerService;
 
     @Test
-    public void givenExistingTrainer_whenFindAllTrainers_thenReturnAllTrainers() {
+    public void givenTrainers_whenFindAll_thenReturnList() {
         // Arrange
-        Trainer trainer = new Trainer();
-        trainer.setId(UUID.randomUUID());
-        trainer.setFirstName("FirstName");
-        trainer.setLastName("LastName");
-
-        List<Trainer> expected = List.of(trainer);
-        when(trainerDao.findAll()).thenReturn(List.of(trainer));
+        List<Trainer> trainers = List.of(new Trainer(), new Trainer());
+        when(trainerRepository.findAll()).thenReturn(trainers);
 
         // Act
         List<Trainer> result = trainerService.findAllTrainers();
 
         // Assert
-        assertEquals(expected, result);
-        verify(trainerDao, times(1)).findAll();
+        assertEquals(trainers, result);
+        verify(trainerRepository).findAll();
     }
 
     @Test
-    public void givenExistingTrainer_whenFindTrainerById_thenReturnTrainer() {
+    public void givenUsername_whenFindAllFreeTrainers_thenReturnList() {
+        // Arrange
+        final String username = "john.doe";
+
+        List<Trainer> trainers = List.of(new Trainer());
+        when(trainerRepository.findFreeTrainersByTraineeUsername(username)).thenReturn(trainers);
+
+        // Act
+        List<Trainer> result = trainerService.findAllFreeTrainersByTraineeUsername(username);
+
+        // Assert
+        assertEquals(trainers, result);
+        verify(trainerRepository).findFreeTrainersByTraineeUsername(username);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    public void givenCriteria_whenFindAll_thenReturnList() {
+        // Arrange
+        CriteriaQuery<Trainer> criteria = mock(CriteriaQuery.class);
+        List<Trainer> trainers = List.of(new Trainer());
+        when(trainerRepository.findAll(criteria)).thenReturn(trainers);
+
+        // Act
+        List<Trainer> result = trainerService.findAllTrainers(criteria);
+
+        // Assert
+        assertEquals(trainers, result);
+        verify(trainerRepository).findAll(criteria);
+    }
+
+    @Test
+    public void givenTrainerId_whenFindById_thenReturnTrainer() {
         // Arrange
         final UUID id = UUID.randomUUID();
 
         Trainer trainer = new Trainer();
         trainer.setId(id);
-        trainer.setFirstName("FirstName");
-        trainer.setLastName("LastName");
 
-        when(trainerDao.findById(id)).thenReturn(Optional.of(trainer));
+        when(trainerRepository.findByIdOrThrow(id)).thenReturn(trainer);
 
         // Act
         Trainer result = trainerService.findTrainerById(id);
 
         // Assert
         assertEquals(trainer, result);
-        verify(trainerDao, times(1)).findById(id);
+        verify(trainerRepository).findByIdOrThrow(id);
     }
 
     @Test
-    public void givenNotExistingTrainer_whenFindTrainerById_thenThrowNotFound() {
+    public void givenUsername_whenFindByUsername_thenReturnTrainer() {
         // Arrange
-        final UUID wrongId = UUID.randomUUID();
+        final String username = "john.doe";
 
-        when(trainerDao.findById(wrongId)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThrows(NotFoundException.class, () -> trainerService.findTrainerById(wrongId));
-        verify(trainerDao, times(1)).findById(wrongId);
-    }
-
-    @Test
-    public void givenNewTrainer_whenCreateTrainer_thenReturnCreatedTrainer() {
-        // Arrange
-        Trainer trainer = new Trainer();
-        trainer.setFirstName("FirstName");
-        trainer.setLastName("LastName");
-
-        Trainer formatted = new Trainer();
-        formatted.setId(UUID.randomUUID());
-        formatted.setFirstName("FirstName");
-        formatted.setLastName("LastName");
-        formatted.setUsername("FirstName.LastName");
-        formatted.setPassword("0123456789");
-
-        when(userService.preCreateUser(trainer)).thenReturn(formatted);
-
-        // Act
-        Trainer result = trainerService.createTrainer(trainer);
-
-        // Assert
-        assertEquals(formatted, result);
-        verify(userService, times(1)).preCreateUser(trainer);
-        verify(trainerDao, times(1)).insert(formatted.getId(), formatted);
-    }
-
-    @Test
-    public void givenExistingTrainer_whenUpdateTrainer_thenReturnUpdatedTrainer() {
-        // Arrange
-        final UUID id = UUID.randomUUID();
+        User user = new User();
+        user.setUsername(username);
 
         Trainer trainer = new Trainer();
-        trainer.setId(id);
-        trainer.setFirstName("FirstName");
-        trainer.setLastName("LastName");
-        trainer.setUsername("FirstName.LastName");
-        trainer.setPassword("0123456789");
+        trainer.setUser(user);
 
-        Trainer updated = new Trainer();
-        updated.setId(id);
-        updated.setFirstName("FirstName");
-        updated.setLastName("LastName");
-        updated.setUsername("FirstName.LastName");
-        updated.setPassword("9876543210"); // password changed
-
-        when(trainerDao.findById(id)).thenReturn(Optional.of(trainer));
-        when(userService.preUpdateUser(updated)).thenReturn(updated);
+        when(trainerRepository.findByUsername(username)).thenReturn(Optional.of(trainer));
 
         // Act
-        Trainer result = trainerService.updateTrainer(id, updated);
+        Trainer result = trainerService.findTrainerByUsername(username);
 
         // Assert
-        assertEquals(updated, result);
-        verify(trainerDao, times(1)).findById(id);
-        verify(userService, times(1)).preUpdateUser(updated);
-        verify(trainerDao, times(1)).update(id, updated);
+        assertEquals(trainer, result);
+        verify(trainerRepository).findByUsername(username);
     }
 
     @Test
-    public void givenNotExistingTrainer_whenUpdateTrainer_thenThrowNotFound() {
+    public void givenNonExistingUsername_whenFindByUsername_thenThrowNotFound() {
         // Arrange
-        final UUID id = UUID.randomUUID();
-        Trainer updated = new Trainer();
-        updated.setId(id);
-        updated.setFirstName("FirstName");
-        updated.setLastName("LastName");
-        updated.setUsername("FirstName.LastName");
-        updated.setPassword("9876543210");
+        final String username = "nonexistent";
 
-        when(trainerDao.findById(id)).thenReturn(Optional.empty());
+        when(trainerRepository.findByUsername(username)).thenReturn(java.util.Optional.empty());
 
         // Act & Assert
-        assertThrows(NotFoundException.class, () -> trainerService.updateTrainer(id, updated));
-        verify(trainerDao, times(1)).findById(id);
-        verify(userService, never()).preUpdateUser(any());
-        verify(trainerDao, never()).update(any(), any());
+        assertThrows(NotFoundException.class, () -> trainerService.findTrainerByUsername(username));
+        verify(trainerRepository).findByUsername(username);
+    }
+
+    @Test
+    public void givenCreateTrainerDto_whenCreateTrainer_thenReturnTrainer() {
+        // Arrange
+        final UUID userId = UUID.randomUUID();
+        final UUID specializationId = UUID.randomUUID();
+
+        CreateTrainerDto createDto = new CreateTrainerDto();
+        createDto.setUserId(userId);
+        createDto.setSpecializationId(specializationId);
+
+        User user = new User();
+        user.setId(userId);
+        user.setUsername("john.doe");
+
+        TrainingType trainingType = new TrainingType();
+        trainingType.setId(specializationId);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(UUID.randomUUID());
+
+        when(userRepository.findByIdOrThrow(userId)).thenReturn(user);
+        when(trainingTypeRepository.findByIdOrThrow(specializationId)).thenReturn(trainingType);
+        when(trainerMapper.toEntity(createDto)).thenReturn(trainer);
+
+        // Act
+        Trainer result = trainerService.createTrainer(createDto);
+
+        // Assert
+        assertEquals(trainer, result);
+        assertEquals(user, result.getUser());
+        assertEquals(trainingType, result.getSpecialization());
+
+        verify(trainerRepository).save(trainer.getId(), trainer);
+    }
+
+    @Test
+    public void givenUpdateTrainer_whenTrainerExists_thenUpdateAndReturn() {
+        // Arrange
+        final UUID trainerId = UUID.randomUUID();
+        final UUID userId = UUID.randomUUID();
+        final UUID traineeId = UUID.randomUUID();
+        final UUID specializationId = UUID.randomUUID();
+
+        UpdateTrainerDto updateDto = new UpdateTrainerDto();
+        updateDto.setUserId(userId);
+        updateDto.setTraineeIds(List.of(traineeId));
+        updateDto.setSpecializationId(specializationId);
+
+        Trainer trainer = new Trainer();
+        trainer.setId(trainerId);
+
+        User user = new User();
+        user.setId(userId);
+
+        Trainee trainee = new Trainee();
+        trainee.setId(traineeId);
+
+        TrainingType trainingType = new TrainingType();
+        trainingType.setId(specializationId);
+
+        when(trainerRepository.findByIdOrThrow(trainerId)).thenReturn(trainer);
+        when(userRepository.findByIdOrThrow(userId)).thenReturn(user);
+        when(traineeRepository.findByIdOrThrow(traineeId)).thenReturn(trainee);
+        when(trainingTypeRepository.findByIdOrThrow(specializationId)).thenReturn(trainingType);
+
+        // Act
+        Trainer result = trainerService.updateTrainer(trainerId, updateDto);
+
+        // Assert
+        assertEquals(user, result.getUser());
+        assertEquals(1, result.getTrainees().size());
+        assertEquals(trainee, result.getTrainees().getFirst());
+        assertEquals(trainingType, result.getSpecialization());
+
+        verify(trainerMapper).updateEntityFromDto(updateDto, trainer);
+        verify(trainerRepository).save(trainerId, trainer);
+    }
+
+    @Test
+    public void givenUpdateTrainer_whenTrainerNotFound_thenThrowNotFound() {
+        // Arrange
+        final UUID trainerId = UUID.randomUUID();
+
+        UpdateTrainerDto updateDto = new UpdateTrainerDto();
+        when(trainerRepository.findByIdOrThrow(trainerId)).thenThrow(new NotFoundException("Not found"));
+
+        // Act & Assert
+        assertThrows(NotFoundException.class, () -> trainerService.updateTrainer(trainerId, updateDto));
+    }
+
+    @Test
+    public void givenDeleteTrainer_whenTrainerExists_thenReturnTrainer() {
+        // Arrange
+        final UUID trainerId = UUID.randomUUID();
+
+        Trainer trainer = new Trainer();
+        trainer.setId(trainerId);
+
+        when(trainerRepository.findByIdOrThrow(trainerId)).thenReturn(trainer);
+
+        // Act
+        Trainer result = trainerService.deleteTrainer(trainerId);
+
+        // Assert
+        assertEquals(trainer, result);
+        verify(trainerRepository).delete(trainerId);
+    }
+
+    @Test
+    public void givenDeleteTrainer_whenTrainerNotFound_thenThrowNotFound() {
+        // Arrange
+        final UUID trainerId = UUID.randomUUID();
+
+        when(trainerRepository.findByIdOrThrow(trainerId)).thenThrow(new NotFoundException("Not found"));
+
+        // Act & Assert
+        assertThrows(NotFoundException.class, () -> trainerService.deleteTrainer(trainerId));
     }
 }

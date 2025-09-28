@@ -1,24 +1,26 @@
 package com.epam.gym.service;
 
-import com.epam.gym.dao.TraineeDao;
-import com.epam.gym.dao.TrainerDao;
-import com.epam.gym.dao.TrainingDao;
-import com.epam.gym.exception.NotFoundException;
+import com.epam.gym.dto.CreateTrainingDto;
+import com.epam.gym.dto.UpdateTrainingDto;
+import com.epam.gym.mapper.TrainingMapper;
 import com.epam.gym.model.Trainee;
 import com.epam.gym.model.Trainer;
 import com.epam.gym.model.Training;
 import com.epam.gym.model.TrainingType;
+import com.epam.gym.repository.TraineeRepository;
+import com.epam.gym.repository.TrainerRepository;
+import com.epam.gym.repository.TrainingRepository;
+import com.epam.gym.repository.TrainingTypeRepository;
 import com.epam.gym.service.impl.TrainingServiceImpl;
+import jakarta.persistence.criteria.CriteriaQuery;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,77 +30,85 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class TrainingServiceTest {
     @Mock
-    private TrainingDao trainingDao;
+    private TrainingRepository trainingRepository;
 
     @Mock
-    private TrainerDao trainerDao;
+    private TrainingMapper trainingMapper;
 
     @Mock
-    private TraineeDao traineeDao;
+    private TraineeRepository traineeRepository;
+
+    @Mock
+    private TrainerRepository trainerRepository;
+
+    @Mock
+    private TrainingTypeRepository trainingTypeRepository;
 
     @InjectMocks
     private TrainingServiceImpl trainingService;
 
     @Test
-    public void givenExistingTrainee_whenFindAllTrainees_thenReturnAllTrainees() {
+    public void givenTrainings_whenFindAll_thenReturnList() {
         // Arrange
-        Training training = new Training();
-        training.setId(UUID.randomUUID());
-        training.setName("TrainingName");
-        training.setType(TrainingType.CARDIO_TRAINING);
-
-        List<Training> expected = List.of(training);
-        when(trainingDao.findAll()).thenReturn(expected);
+        List<Training> trainings = List.of(new Training(), new Training());
+        when(trainingRepository.findAll()).thenReturn(trainings);
 
         // Act
         List<Training> result = trainingService.findAllTrainings();
 
         // Assert
-        assertEquals(expected, result);
-        verify(trainingDao, times(1)).findAll();
+        assertEquals(trainings, result);
+        verify(trainingRepository).findAll();
     }
 
     @Test
-    public void givenExistingTraining_whenFindTrainingById_thenReturnTraining() {
+    @SuppressWarnings("unchecked")
+    public void givenCriteria_whenFindAll_thenReturnList() {
         // Arrange
-        UUID trainingId = UUID.randomUUID();
-        Training training = new Training();
-        training.setId(trainingId);
+        CriteriaQuery<Training> criteria = mock(CriteriaQuery.class);
+        List<Training> trainings = List.of(new Training());
 
-        when(trainingDao.findById(trainingId)).thenReturn(Optional.of(training));
+        when(trainingRepository.findAll(criteria)).thenReturn(trainings);
 
         // Act
-        Training result = trainingService.findTrainingById(trainingId);
+        List<Training> result = trainingService.findAllTrainings(criteria);
+
+        // Assert
+        assertEquals(trainings, result);
+        verify(trainingRepository).findAll(criteria);
+    }
+
+    @Test
+    public void givenTrainingId_whenFindById_thenReturnTraining() {
+        // Arrange
+        final UUID id = UUID.randomUUID();
+
+        Training training = new Training();
+        training.setId(id);
+
+        when(trainingRepository.findByIdOrThrow(id)).thenReturn(training);
+
+        // Act
+        Training result = trainingService.findTrainingById(id);
 
         // Assert
         assertEquals(training, result);
-        verify(trainingDao, times(1)).findById(trainingId);
+        verify(trainingRepository).findByIdOrThrow(id);
     }
 
     @Test
-    public void givenNotExistingTraining_whenFindTrainingById_thenThrowNotFound() {
+    public void givenValidDto_whenCreateTraining_thenReturnTraining() {
         // Arrange
-        UUID trainingId = UUID.randomUUID();
-        when(trainingDao.findById(trainingId)).thenReturn(Optional.empty());
+        final UUID trainerId = UUID.randomUUID();
+        final UUID traineeId = UUID.randomUUID();
+        final UUID typeId = UUID.randomUUID();
 
-        // Act & Assert
-        assertThrows(NotFoundException.class, () -> trainingService.findTrainingById(trainingId));
-        verify(trainingDao, times(1)).findById(trainingId);
-    }
-
-    @Test
-    public void givenValidTraining_whenCreateTraining_thenReturnCreatedTraining() {
-        // Arrange
-        UUID trainerId = UUID.randomUUID();
-        UUID traineeId = UUID.randomUUID();
-
-        Training training = new Training();
-        training.setTrainerId(trainerId);
-        training.setTraineeId(traineeId);
-        training.setName("Cardio");
-        training.setType(TrainingType.CARDIO_TRAINING);
-        training.setDate(LocalDate.now());
-        training.setDuration(Duration.ofHours(1));
+        CreateTrainingDto createDto = new CreateTrainingDto();
+        createDto.setTrainerId(trainerId);
+        createDto.setTraineeId(traineeId);
+        createDto.setTrainingTypeId(typeId);
+        createDto.setDuration(60);
+        createDto.setDate(LocalDate.now());
 
         Trainer trainer = new Trainer();
         trainer.setId(trainerId);
@@ -106,59 +116,117 @@ public class TrainingServiceTest {
         Trainee trainee = new Trainee();
         trainee.setId(traineeId);
 
-        when(trainerDao.findById(trainerId)).thenReturn(Optional.of(trainer));
-        when(traineeDao.findById(traineeId)).thenReturn(Optional.of(trainee));
+        TrainingType type = new TrainingType();
+        type.setId(typeId);
+
+        Training training = new Training();
+        training.setId(UUID.randomUUID());
+
+        when(trainerRepository.findByIdOrThrow(trainerId)).thenReturn(trainer);
+        when(traineeRepository.findByIdOrThrow(traineeId)).thenReturn(trainee);
+        when(trainingTypeRepository.findByIdOrThrow(typeId)).thenReturn(type);
+        when(trainingMapper.toEntity(createDto)).thenReturn(training);
 
         // Act
-        Training result = trainingService.createTraining(training);
+        Training result = trainingService.createTraining(createDto);
 
         // Assert
         assertEquals(training, result);
-        assertEquals(training.getId(), result.getId()); // training ID is set
-        verify(trainerDao, times(1)).findById(trainerId);
-        verify(traineeDao, times(1)).findById(traineeId);
-        verify(trainingDao, times(1)).insert(training.getId(), training);
+        assertEquals(trainer, result.getTrainer());
+        assertEquals(trainee, result.getTrainee());
+        assertEquals(type, result.getType());
+
+        verify(trainingRepository).save(training.getId(), training);
     }
 
     @Test
-    public void givenNonExistingTrainer_whenCreateTraining_thenThrowNotFound() {
+    public void givenInvalidDuration_whenCreateTraining_thenThrowException() {
         // Arrange
-        UUID trainerId = UUID.randomUUID();
-        UUID traineeId = UUID.randomUUID();
-
-        Training training = new Training();
-        training.setTrainerId(trainerId);
-        training.setTraineeId(traineeId);
-
-        when(trainerDao.findById(trainerId)).thenReturn(Optional.empty());
+        final CreateTrainingDto dto = new CreateTrainingDto();
+        dto.setDuration(0);
 
         // Act & Assert
-        assertThrows(NotFoundException.class, () -> trainingService.createTraining(training));
-        verify(trainerDao, times(1)).findById(trainerId);
-        verify(traineeDao, never()).findById(any());
-        verify(trainingDao, never()).insert(any(), any());
+        assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(dto));
+        verifyNoInteractions(trainerRepository, traineeRepository, trainingTypeRepository);
     }
 
     @Test
-    public void givenNonExistingTrainee_whenCreateTraining_thenThrowNotFound() {
+    public void givenValidDto_whenUpdateTraining_thenReturnUpdatedTraining() {
         // Arrange
-        UUID trainerId = UUID.randomUUID();
-        UUID traineeId = UUID.randomUUID();
+        final UUID id = UUID.randomUUID();
+        final UUID trainerId = UUID.randomUUID();
+        final UUID traineeId = UUID.randomUUID();
+        final UUID typeId = UUID.randomUUID();
+
+        UpdateTrainingDto updateDto = new UpdateTrainingDto();
+        updateDto.setTrainerId(trainerId);
+        updateDto.setTraineeId(traineeId);
+        updateDto.setTrainingTypeId(typeId);
+        updateDto.setDuration(90);
 
         Training training = new Training();
-        training.setTrainerId(trainerId);
-        training.setTraineeId(traineeId);
+        training.setId(id);
 
         Trainer trainer = new Trainer();
         trainer.setId(trainerId);
 
-        when(trainerDao.findById(trainerId)).thenReturn(Optional.of(trainer));
-        when(traineeDao.findById(traineeId)).thenReturn(Optional.empty());
+        Trainee trainee = new Trainee();
+        trainee.setId(traineeId);
+
+        TrainingType type = new TrainingType();
+        type.setId(typeId);
+
+        when(trainingRepository.findByIdOrThrow(id)).thenReturn(training);
+        when(trainerRepository.findByIdOrThrow(trainerId)).thenReturn(trainer);
+        when(traineeRepository.findByIdOrThrow(traineeId)).thenReturn(trainee);
+        when(trainingTypeRepository.findByIdOrThrow(typeId)).thenReturn(type);
+
+        // Act
+        Training result = trainingService.updateTraining(id, updateDto);
+
+        // Assert
+        assertEquals(training, result);
+        assertEquals(trainer, result.getTrainer());
+        assertEquals(trainee, result.getTrainee());
+        assertEquals(type, result.getType());
+
+        verify(trainingMapper).updateEntityFromDto(updateDto, training);
+        verify(trainingRepository).save(id, training);
+    }
+
+    @Test
+    public void givenInvalidDuration_whenUpdateTraining_thenThrowException() {
+        // Arrange
+        final UUID id = UUID.randomUUID();
+
+        UpdateTrainingDto updateDto = new UpdateTrainingDto();
+        updateDto.setDuration(0);
+
+        Training training = new Training();
+        when(trainingRepository.findByIdOrThrow(id)).thenReturn(training);
 
         // Act & Assert
-        assertThrows(NotFoundException.class, () -> trainingService.createTraining(training));
-        verify(trainerDao, times(1)).findById(trainerId);
-        verify(traineeDao, times(1)).findById(traineeId);
-        verify(trainingDao, never()).insert(any(), any());
+        assertThrows(IllegalArgumentException.class, () -> trainingService.updateTraining(id, updateDto));
+
+        verify(trainingRepository).findByIdOrThrow(id);
+        verifyNoMoreInteractions(trainingRepository);
+    }
+
+    @Test
+    public void givenId_whenDeleteTraining_thenReturnDeletedTraining() {
+        // Arrange
+        final UUID id = UUID.randomUUID();
+
+        Training training = new Training();
+        training.setId(id);
+
+        when(trainingRepository.findByIdOrThrow(id)).thenReturn(training);
+
+        // Act
+        Training result = trainingService.deleteTraining(id);
+
+        // Assert
+        assertEquals(training, result);
+        verify(trainingRepository).delete(id);
     }
 }
