@@ -2,8 +2,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>edu.kpi</groupId>
-    <artifactId>gym-client-system</artifactId>
+    <groupId>com.epam</groupId>
+    <artifactId>gym-system</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <name>Gym CRM</name>
@@ -13,9 +13,12 @@
         <spring.version>7.0.0-M9</spring.version>
         <jakarta.version>2.1.1</jakarta.version>
         <jackson.version>2.20.0</jackson.version>
+        <hibernate.version>7.1.1.Final</hibernate.version>
+        <postgres.version>42.7.8</postgres.version>
         <lombok.version>1.18.40</lombok.version>
         <junit.version>5.13.4</junit.version>
         <mockito.version>5.19.0</mockito.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
     </properties>
 
     <dependencies>
@@ -39,11 +42,39 @@
             <version>1.9.24</version>
         </dependency>
 
+        <!-- Spring ORM -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-orm</artifactId>
+            <version>${spring.version}</version>
+        </dependency>
+
+        <!-- Spring Crypto -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+            <version>7.0.0-M3</version>
+        </dependency>
+
         <!-- Jakarta annotations -->
         <dependency>
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
             <version>${jakarta.version}</version>
+        </dependency>
+
+        <!-- Hibernate -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+
+        <!-- PostgreSQL JDBC driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgres.version}</version>
         </dependency>
 
         <!-- Jackson -->
@@ -77,6 +108,20 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
+        </dependency>
+
+        <!-- Environment reading util -->
+        <dependency>
+            <groupId>io.github.cdimascio</groupId>
+            <artifactId>java-dotenv</artifactId>
+            <version>5.2.2</version>
+        </dependency>
+
+        <!-- Mapper -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>${mapstruct.version}</version>
         </dependency>
 
         <!-- JUnit -->
