@@ -1,25 +1,42 @@
 package com.epam.gym.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.*;
-import lombok.experimental.SuperBuilder;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.FieldNameConstants;
 
-import java.io.Serial;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
+@Entity
+@Table(name = "trainees")
 @Data
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-@SuperBuilder
-@AllArgsConstructor
 @NoArgsConstructor
-public class Trainee extends User {
-    @Serial
-    private static final long serialVersionUID = 1L;
+@FieldNameConstants
+public class Trainee {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @Column(name = "birth_date")
     private LocalDate birthDate;
+
+    @Column
     private String address;
 
-    private Training training;
+    @OneToOne(cascade = CascadeType.ALL)
+    private User user;
+
+    @OneToMany(mappedBy = "trainee", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Training> trainings = new ArrayList<>();
+
+    @ManyToMany
+    @JoinTable(
+            name = "trainee_trainers",
+            joinColumns = @JoinColumn(name = "trainee_id"),
+            inverseJoinColumns = @JoinColumn(name = "trainer_id")
+    )
+    private List<Trainer> trainers = new ArrayList<>();
 }

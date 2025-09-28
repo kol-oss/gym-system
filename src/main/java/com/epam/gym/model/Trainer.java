@@ -1,22 +1,34 @@
 package com.epam.gym.model;
 
-import lombok.*;
-import lombok.experimental.SuperBuilder;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.experimental.FieldNameConstants;
 
-import java.io.Serial;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
+@Entity
+@Table(name = "trainers")
 @Data
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-@SuperBuilder
-@AllArgsConstructor
 @NoArgsConstructor
-public class Trainer extends User {
-    @Serial
-    private static final long serialVersionUID = 1L;
+@FieldNameConstants
+public class Trainer {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    private String specialization;
-    private TrainingType trainingType;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "training_type_id", nullable = false)
+    private TrainingType specialization;
 
-    private Training training;
+    @OneToOne(cascade = CascadeType.ALL)
+    private User user;
+
+    @OneToMany(mappedBy = "trainer", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Training> trainings;
+
+    @ManyToMany(mappedBy = "trainers")
+    private List<Trainee> trainees = new ArrayList<>();
 }

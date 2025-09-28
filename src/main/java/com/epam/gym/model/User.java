@@ -1,24 +1,34 @@
 package com.epam.gym.model;
 
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.SuperBuilder;
+import lombok.experimental.FieldNameConstants;
 
-import java.io.Serial;
-import java.io.Serializable;
 import java.util.UUID;
 
+@Entity
+@Table(name = "users")
 @Data
-@SuperBuilder
 @NoArgsConstructor
-public abstract class User implements Serializable {
-    @Serial
-    private static final long serialVersionUID = 1L;
+@FieldNameConstants
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-    protected UUID id;
-    protected String firstName;
-    protected String lastName;
-    protected String username;
-    protected String password;
-    protected boolean isActive;
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
+
+    @Column(unique = true, nullable = false)
+    private String username;
+
+    @Column(nullable = false)
+    private String password;
+
+    @Column(nullable = false)
+    private boolean isActive;
 }

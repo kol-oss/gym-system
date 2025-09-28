@@ -1,28 +1,41 @@
 package com.epam.gym.model;
 
-import lombok.AllArgsConstructor;
+import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.FieldNameConstants;
 
-import java.io.Serial;
-import java.io.Serializable;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.util.UUID;
 
+@Entity
+@Table(name = "trainings")
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-public class Training implements Serializable {
-    @Serial
-    private static final long serialVersionUID = 1L;
-
+@FieldNameConstants
+public class Training {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    private UUID traineeId;
-    private UUID trainerId;
 
+    @Column(nullable = false)
     private String name;
-    private TrainingType type;
+
+    @Column(nullable = false)
     private LocalDate date;
-    private Duration duration;
+
+    @Column(nullable = false)
+    private int duration;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "training_type_id", nullable = false)
+    private TrainingType type;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "trainee_id", nullable = false)
+    private Trainee trainee;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "trainer_id", nullable = false)
+    private Trainer trainer;
 }
