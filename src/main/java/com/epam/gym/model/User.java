@@ -3,6 +3,7 @@ package com.epam.gym.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.FieldNameConstants;
 
 import java.util.UUID;
@@ -12,6 +13,7 @@ import java.util.UUID;
 @Data
 @NoArgsConstructor
 @FieldNameConstants
+@ToString(exclude = {"trainee", "trainer"})
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

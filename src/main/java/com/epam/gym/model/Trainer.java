@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-import lombok.experimental.FieldNameConstants;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +13,6 @@ import java.util.UUID;
 @Table(name = "trainers")
 @Data
 @NoArgsConstructor
-@FieldNameConstants
 @ToString(exclude = {"trainings", "trainees"})
 public class Trainer {
     @Id

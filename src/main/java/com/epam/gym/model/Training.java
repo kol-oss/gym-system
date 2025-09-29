@@ -3,7 +3,6 @@ package com.epam.gym.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.FieldNameConstants;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -12,7 +11,6 @@ import java.util.UUID;
 @Table(name = "trainings")
 @Data
 @NoArgsConstructor
-@FieldNameConstants
 public class Training {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
