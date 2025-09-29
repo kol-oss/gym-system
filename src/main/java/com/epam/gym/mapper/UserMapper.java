@@ -1,6 +1,7 @@
 package com.epam.gym.mapper;
 
 import com.epam.gym.dto.CreateUserDto;
+import com.epam.gym.dto.CreateUserResponse;
 import com.epam.gym.dto.UpdateUserDto;
 import com.epam.gym.model.User;
 import org.mapstruct.Mapper;
@@ -24,4 +25,7 @@ public interface UserMapper {
     @Mapping(target = "trainee", ignore = true)
     @Mapping(target = "trainer", ignore = true)
     void updateEntityFromDto(UpdateUserDto dto, @MappingTarget User user);
+
+    @Mapping(target = "password", ignore = true)
+    CreateUserResponse toResponse(User user);
 }

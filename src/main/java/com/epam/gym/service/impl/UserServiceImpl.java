@@ -71,8 +71,7 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user.getId(), user);
         log.debug("User with name {} created", username);
 
-        CreateUserResponse response = new CreateUserResponse();
-        response.setUsername(username);
+        CreateUserResponse response = userMapper.toResponse(user);
         response.setPassword(password);
 
         return response;
