@@ -17,7 +17,7 @@ public class TraineeRepositoryImpl extends CrudRepositoryImpl<Trainee, UUID> imp
 
     @Override
     public Optional<Trainee> findByUsername(String username) {
-        Session session = sessionFactory.getCurrentSession();
+        Session session = getReadSession();
         return session.createQuery(
                         "from Trainee t where t.user.username = :username",
                         Trainee.class

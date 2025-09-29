@@ -31,4 +31,10 @@ public class User {
 
     @Column(nullable = false)
     private boolean isActive;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    private Trainee trainee;
+
+    @OneToOne(cascade = CascadeType.ALL)
+    private Trainer trainer;
 }

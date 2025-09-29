@@ -47,7 +47,7 @@ public class TraineeRepositoryTest {
         Trainee trainee = new Trainee();
         trainee.setId(UUID.randomUUID());
 
-        when(sessionFactory.getCurrentSession()).thenReturn(session);
+        when(sessionFactory.openSession()).thenReturn(session);
         when(session.createQuery(any(), eq(Trainee.class))).thenReturn(query);
         when(query.setParameter(parameter, username)).thenReturn(query);
         when(query.uniqueResultOptional()).thenReturn(Optional.of(trainee));
@@ -70,7 +70,7 @@ public class TraineeRepositoryTest {
         final String username = "unknown.user";
         final String parameter = "username";
 
-        when(sessionFactory.getCurrentSession()).thenReturn(session);
+        when(sessionFactory.openSession()).thenReturn(session);
         when(session.createQuery(any(), eq(Trainee.class))).thenReturn(query);
         when(query.setParameter(parameter, username)).thenReturn(query);
         when(query.uniqueResultOptional()).thenReturn(Optional.empty());

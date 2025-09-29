@@ -142,8 +142,20 @@ public class TrainingServiceTest {
     @Test
     public void givenInvalidDuration_whenCreateTraining_thenThrowException() {
         // Arrange
-        final CreateTrainingDto dto = new CreateTrainingDto();
+        CreateTrainingDto dto = new CreateTrainingDto();
         dto.setDuration(0);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(dto));
+        verifyNoInteractions(trainerRepository, traineeRepository, trainingTypeRepository);
+    }
+
+    @Test
+    public void givenInvalidDate_whenCreateTraining_thenThrowException() {
+        // Arrange
+        CreateTrainingDto dto = new CreateTrainingDto();
+        dto.setDuration(1);
+        dto.setDate(null);
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () -> trainingService.createTraining(dto));

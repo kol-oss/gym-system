@@ -3,7 +3,7 @@ package com.epam.gym.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.experimental.FieldNameConstants;
+import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import java.util.UUID;
 @Table(name = "trainees")
 @Data
 @NoArgsConstructor
-@FieldNameConstants
+@ToString(exclude = {"trainings", "trainers"})
 public class Trainee {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -26,10 +26,11 @@ public class Trainee {
     @Column
     private String address;
 
-    @OneToOne(cascade = CascadeType.ALL)
+    @OneToOne
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @OneToMany(mappedBy = "trainee", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "trainee", cascade = CascadeType.ALL)
     private List<Training> trainings = new ArrayList<>();
 
     @ManyToMany

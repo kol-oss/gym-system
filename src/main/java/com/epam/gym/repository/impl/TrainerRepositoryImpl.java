@@ -19,7 +19,7 @@ public class TrainerRepositoryImpl extends CrudRepositoryImpl<Trainer, UUID> imp
 
     @Override
     public List<Trainer> findFreeTrainersByTraineeUsername(String username) {
-        Session session = getTransactionalSession();
+        Session session = getReadSession();
 
         String rawQuery = """
                     SELECT tr
@@ -39,7 +39,7 @@ public class TrainerRepositoryImpl extends CrudRepositoryImpl<Trainer, UUID> imp
 
     @Override
     public Optional<Trainer> findByUsername(String username) {
-        Session session = sessionFactory.getCurrentSession();
+        Session session = getReadSession();
         return session.createQuery(
                         "from Trainer t where t.user.username = :username",
                         Trainer.class

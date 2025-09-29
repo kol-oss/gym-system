@@ -47,7 +47,7 @@ public class TrainerRepositoryTest {
 
         List<Trainer> trainers = List.of(new Trainer());
 
-        when(sessionFactory.getCurrentSession()).thenReturn(session);
+        when(sessionFactory.openSession()).thenReturn(session);
         String rawQuery = """
                     SELECT tr
                     FROM Trainer tr
@@ -78,7 +78,7 @@ public class TrainerRepositoryTest {
         final String username = "unknown_user";
         final String parameter = "username";
 
-        when(sessionFactory.getCurrentSession()).thenReturn(session);
+        when(sessionFactory.openSession()).thenReturn(session);
         String rawQuery = """
                     SELECT tr
                     FROM Trainer tr
@@ -112,7 +112,7 @@ public class TrainerRepositoryTest {
         Trainer trainer = new Trainer();
         trainer.setId(UUID.randomUUID());
 
-        when(sessionFactory.getCurrentSession()).thenReturn(session);
+        when(sessionFactory.openSession()).thenReturn(session);
         when(session.createQuery(any(), eq(Trainer.class))).thenReturn(query);
         when(query.setParameter(parameter, username)).thenReturn(query);
         when(query.uniqueResultOptional()).thenReturn(Optional.of(trainer));
@@ -134,7 +134,7 @@ public class TrainerRepositoryTest {
         final String username = "unknown_user";
         final String parameter = "username";
 
-        when(sessionFactory.getCurrentSession()).thenReturn(session);
+        when(sessionFactory.openSession()).thenReturn(session);
         when(session.createQuery(any(), eq(Trainer.class))).thenReturn(query);
         when(query.setParameter(parameter, username)).thenReturn(query);
         when(query.uniqueResultOptional()).thenReturn(Optional.empty());

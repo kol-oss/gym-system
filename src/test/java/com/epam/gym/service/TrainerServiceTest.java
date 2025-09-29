@@ -149,6 +149,7 @@ public class TrainerServiceTest {
     public void givenCreateTrainerDto_whenCreateTrainer_thenReturnTrainer() {
         // Arrange
         final UUID userId = UUID.randomUUID();
+        final UUID trainerId = UUID.randomUUID();
         final UUID specializationId = UUID.randomUUID();
 
         CreateTrainerDto createDto = new CreateTrainerDto();
@@ -163,11 +164,12 @@ public class TrainerServiceTest {
         trainingType.setId(specializationId);
 
         Trainer trainer = new Trainer();
-        trainer.setId(UUID.randomUUID());
+        trainer.setId(trainerId);
 
         when(userRepository.findByIdOrThrow(userId)).thenReturn(user);
         when(trainingTypeRepository.findByIdOrThrow(specializationId)).thenReturn(trainingType);
         when(trainerMapper.toEntity(createDto)).thenReturn(trainer);
+        when(trainerRepository.save(trainerId, trainer)).thenReturn(trainer);
 
         // Act
         Trainer result = trainerService.createTrainer(createDto);

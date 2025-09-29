@@ -61,10 +61,10 @@ public class TraineeServiceImpl implements TraineeService {
         Trainee trainee = traineeMapper.toEntity(traineeDto);
         trainee.setUser(user);
 
-        traineeRepository.save(trainee.getId(), trainee);
+        Trainee saved = traineeRepository.save(trainee.getId(), trainee);
         log.info("Trainee with username {} and id {} was created", user.getUsername(), trainee.getId());
 
-        return trainee;
+        return saved;
     }
 
     private List<Trainer> getTrainers(List<UUID> trainerIds) {

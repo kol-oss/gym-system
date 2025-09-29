@@ -50,7 +50,7 @@ public class UserRepositoryTest {
         User user = new User();
         user.setId(UUID.randomUUID());
 
-        when(sessionFactory.getCurrentSession()).thenReturn(session);
+        when(sessionFactory.openSession()).thenReturn(session);
         when(session.createQuery(any(), eq(User.class))).thenReturn(userQuery);
         when(userQuery.setParameter(parameter, username)).thenReturn(userQuery);
         when(userQuery.uniqueResultOptional()).thenReturn(Optional.of(user));
@@ -73,7 +73,7 @@ public class UserRepositoryTest {
         final String username = "unknown_user";
         final String parameter = "username";
 
-        when(sessionFactory.getCurrentSession()).thenReturn(session);
+        when(sessionFactory.openSession()).thenReturn(session);
         when(session.createQuery(any(), eq(User.class))).thenReturn(userQuery);
         when(userQuery.setParameter(parameter, username)).thenReturn(userQuery);
         when(userQuery.uniqueResultOptional()).thenReturn(Optional.empty());
@@ -98,7 +98,7 @@ public class UserRepositoryTest {
         final Long expectedCount = 5L;
         final String pattern = username + "%";
 
-        when(sessionFactory.getCurrentSession()).thenReturn(session);
+        when(sessionFactory.openSession()).thenReturn(session);
         when(session.createQuery(any(), eq(Long.class))).thenReturn(countQuery);
         when(countQuery.setParameter(parameter, pattern)).thenReturn(countQuery);
         when(countQuery.uniqueResult()).thenReturn(expectedCount);
@@ -121,7 +121,7 @@ public class UserRepositoryTest {
         final String parameter = "pattern";
         final String pattern = username + "%";
 
-        when(sessionFactory.getCurrentSession()).thenReturn(session);
+        when(sessionFactory.openSession()).thenReturn(session);
         when(session.createQuery(any(), eq(Long.class))).thenReturn(countQuery);
         when(countQuery.setParameter(parameter, pattern)).thenReturn(countQuery);
         when(countQuery.uniqueResult()).thenReturn(null);

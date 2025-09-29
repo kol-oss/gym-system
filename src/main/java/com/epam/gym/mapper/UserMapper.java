@@ -14,10 +14,14 @@ public interface UserMapper {
     @Mapping(target = "username", ignore = true)
     @Mapping(target = "password", ignore = true)
     @Mapping(target = "active", ignore = true)
+    @Mapping(target = "trainee", ignore = true)
+    @Mapping(target = "trainer", ignore = true)
     User toEntity(CreateUserDto dto);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "username", ignore = true)
     @Mapping(target = "password", ignore = true)
+    @Mapping(target = "trainee", ignore = true)
+    @Mapping(target = "trainer", ignore = true)
     void updateEntityFromDto(UpdateUserDto dto, @MappingTarget User user);
 }

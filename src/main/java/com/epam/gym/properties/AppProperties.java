@@ -17,19 +17,4 @@ public class AppProperties {
 
     @Value("${app.security.username-delimiter}")
     private String usernameDelimiter;
-
-    @Value("${DB_URL}")
-    private String dbUrl;
-
-    @Value("${DB_USERNAME}")
-    private String dbUsername;
-
-    @Value("${DB_PASSWORD}")
-    private String dbPassword;
-
-    @Value("${db.driver}")
-    private String dbDriver;
-
-    @Value("${db.hibernate.mode}")
-    private String hibernateMode;
 }

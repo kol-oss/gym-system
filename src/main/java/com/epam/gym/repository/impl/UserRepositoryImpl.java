@@ -17,7 +17,7 @@ public class UserRepositoryImpl extends CrudRepositoryImpl<User, UUID> implement
 
     @Override
     public Optional<User> findByUsername(String username) {
-        Session session = sessionFactory.getCurrentSession();
+        Session session = getReadSession();
         return session.createQuery("from User u where u.username = :username", User.class)
                 .setParameter("username", username)
                 .uniqueResultOptional();
@@ -25,7 +25,7 @@ public class UserRepositoryImpl extends CrudRepositoryImpl<User, UUID> implement
 
     @Override
     public long countByUsernameLike(String username) {
-        Session session = sessionFactory.getCurrentSession();
+        Session session = getReadSession();
         String pattern = username + "%";
 
         Long count = session.createQuery(

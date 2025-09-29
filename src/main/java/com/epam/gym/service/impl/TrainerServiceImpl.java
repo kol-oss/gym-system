@@ -4,10 +4,7 @@ import com.epam.gym.dto.CreateTrainerDto;
 import com.epam.gym.dto.UpdateTrainerDto;
 import com.epam.gym.exception.NotFoundException;
 import com.epam.gym.mapper.TrainerMapper;
-import com.epam.gym.model.Trainee;
-import com.epam.gym.model.Trainer;
-import com.epam.gym.model.TrainingType;
-import com.epam.gym.model.User;
+import com.epam.gym.model.*;
 import com.epam.gym.repository.TraineeRepository;
 import com.epam.gym.repository.TrainerRepository;
 import com.epam.gym.repository.TrainingTypeRepository;
@@ -76,10 +73,10 @@ public class TrainerServiceImpl implements TrainerService {
             trainer.setSpecialization(trainingType);
         }
 
-        trainerRepository.save(trainer.getId(), trainer);
+        Trainer saved = trainerRepository.save(trainer.getId(), trainer);
         log.info("Trainer with username {} and id {} was created", user.getUsername(), trainer.getId());
 
-        return trainer;
+        return saved;
     }
 
     private List<Trainee> getTrainees(List<UUID> traineeIds) {

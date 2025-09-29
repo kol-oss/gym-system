@@ -1,6 +1,6 @@
 package com.epam.gym.config;
 
-import com.epam.gym.properties.AppProperties;
+import com.epam.gym.properties.DatabaseProperties;
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,7 +14,7 @@ import java.util.Properties;
 @Configuration
 @AllArgsConstructor
 public class DatabaseConfig {
-    private AppProperties properties;
+    private DatabaseProperties properties;
 
     @Bean
     public DataSource dataSource() {
@@ -33,9 +33,9 @@ public class DatabaseConfig {
         sessionFactory.setPackagesToScan("com.epam.gym.model");
 
         Properties hibernateProperties = new Properties();
-        hibernateProperties.setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
-        hibernateProperties.setProperty("hibernate.show_sql", "true");
-        hibernateProperties.setProperty("hibernate.format_sql", "true");
+        hibernateProperties.setProperty("hibernate.dialect", properties.getHibernateDialect());
+        hibernateProperties.setProperty("hibernate.show_sql", String.valueOf(properties.isShowSql()));
+        hibernateProperties.setProperty("hibernate.format_sql", String.valueOf(properties.isFormatSql()));
         hibernateProperties.setProperty("hibernate.hbm2ddl.auto", properties.getHibernateMode());
 
         sessionFactory.setHibernateProperties(hibernateProperties);

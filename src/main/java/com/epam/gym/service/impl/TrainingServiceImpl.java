@@ -54,6 +54,10 @@ public class TrainingServiceImpl implements TrainingService {
             throw new IllegalArgumentException("Duration must be greater than 0");
         }
 
+        if (trainingDto.getDate() == null) {
+            throw new IllegalArgumentException("Training date cannot be null");
+        }
+
         Trainer trainer = trainerRepository.findByIdOrThrow(trainingDto.getTrainerId());
         Trainee trainee = traineeRepository.findByIdOrThrow(trainingDto.getTraineeId());
         TrainingType trainingType = trainingTypeRepository.findByIdOrThrow(trainingDto.getTrainingTypeId());

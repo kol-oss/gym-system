@@ -129,6 +129,7 @@ public class TraineeServiceTest {
     public void givenCreateTraineeDto_whenCreateTrainee_thenReturnTrainee() {
         // Arrange
         final UUID userId = UUID.randomUUID();
+        final UUID traineeId = UUID.randomUUID();
 
         CreateTraineeDto createDto = new CreateTraineeDto();
         createDto.setUserId(userId);
@@ -138,10 +139,11 @@ public class TraineeServiceTest {
         user.setUsername("john.doe");
 
         Trainee trainee = new Trainee();
-        trainee.setId(UUID.randomUUID());
+        trainee.setId(traineeId);
 
         when(userRepository.findByIdOrThrow(userId)).thenReturn(user);
         when(traineeMapper.toEntity(createDto)).thenReturn(trainee);
+        when(traineeRepository.save(traineeId, trainee)).thenReturn(trainee);
 
         // Act
         Trainee result = traineeService.createTrainee(createDto);
