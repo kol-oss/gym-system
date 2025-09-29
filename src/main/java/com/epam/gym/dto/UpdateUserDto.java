@@ -7,5 +7,5 @@ public class UpdateUserDto {
     private String firstName;
     private String lastName;
     private String password;
-    private boolean isActive;
+    private Boolean isActive;
 }

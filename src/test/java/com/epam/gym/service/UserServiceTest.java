@@ -101,6 +101,9 @@ public class UserServiceTest {
         createDto.setFirstName(firstName);
         createDto.setLastName(lastName);
 
+        CreateUserResponse expectedResponse = new CreateUserResponse();
+        expectedResponse.setUsername(username);
+
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
@@ -108,6 +111,8 @@ public class UserServiceTest {
         user.setPassword(password);
 
         when(userMapper.toEntity(createDto)).thenReturn(user);
+        when(userMapper.toResponse(user)).thenReturn(expectedResponse);
+
         when(appProperties.getMaxPasswordLength()).thenReturn(MAX_PASSWORD_LENGTH);
         when(appProperties.getUsernameDelimiter()).thenReturn(USERNAME_DELIMITER);
 
@@ -130,13 +135,18 @@ public class UserServiceTest {
         // Arrange
         final String firstName = "John";
         final String lastName = "Doe";
+
         final String username = firstName + USERNAME_DELIMITER + lastName;
         final String password = "encoded";
         final long occurrences = 2;
+        final String formattedUsername = username + occurrences;
 
         CreateUserDto createDto = new CreateUserDto();
         createDto.setFirstName(firstName);
         createDto.setLastName(lastName);
+
+        CreateUserResponse expectedResponse = new CreateUserResponse();
+        expectedResponse.setUsername(formattedUsername);
 
         User user = new User();
         user.setFirstName(firstName);
@@ -145,6 +155,8 @@ public class UserServiceTest {
         user.setPassword(password);
 
         when(userMapper.toEntity(createDto)).thenReturn(user);
+        when(userMapper.toResponse(user)).thenReturn(expectedResponse);
+
         when(appProperties.getMaxPasswordLength()).thenReturn(MAX_PASSWORD_LENGTH);
         when(appProperties.getUsernameDelimiter()).thenReturn(USERNAME_DELIMITER);
         when(userRepository.findByUsername(username)).thenReturn(Optional.of(new User()));
@@ -154,8 +166,6 @@ public class UserServiceTest {
         CreateUserResponse response = userService.createUser(createDto);
 
         // Assert
-        final String formattedUsername = username + occurrences;
-
         assertEquals(formattedUsername, response.getUsername());
         assertNotEquals(password, response.getPassword());
 

@@ -19,7 +19,8 @@ public class LoggingAspect {
             Signature signature = joinPoint.getSignature();
             log.error("{}.{}(): {}", signature.getDeclaringTypeName(), signature.getName(), ex.getMessage());
 
-            return null;
+            throw new RuntimeException(ex);
+            // return null;
         }
     }
 }

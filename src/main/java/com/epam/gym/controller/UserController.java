@@ -37,7 +37,7 @@ public class UserController {
         authController.checkToken(token);
 
         UpdateUserDto userDto = new UpdateUserDto();
-        userDto.setActive(isActive);
+        userDto.setIsActive(isActive);
 
         return userService.updateUser(userId, userDto);
     }
